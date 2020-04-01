@@ -1,4 +1,4 @@
-function tokenizer(input) {
+function getTokens(input) {
   let current = 0
   let tokens = []
   const NUMBERS = /[0-9]/
@@ -70,7 +70,111 @@ function tokenizer(input) {
     continue
   }
 
-  console.log(tokens)
+  return tokens
 }
 
-tokenizer("(add 2 (subtract 2 4))")
+/**
+ * Parses tokens into an Abstract Syntax Tree
+ *
+ * Example:
+ * {
+ *   type: "Program",
+ *   body: [
+ *     {
+ *       type: "CallExpression",
+ *       name: "add",
+ *       params: [
+ *         {
+ *           type: "NumberLiteral",
+ *           value: 2
+ *         },
+ *         {
+ *           type: "CallExpression"
+ *           name: "subtract",
+ *           params: [
+ *             {
+ *               type: "NumberLiteral",
+ *               value: 4
+ *             },
+ *             {
+ *               type: "NumberLiteral",
+ *               value: 4
+ *             }
+ *           ]
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * @param {Array} tokens The tokens array
+ */
+function getAbstractSyntexTree(tokens) {
+  let current = 0
+
+  function walk() {
+    let token = tokens[current]
+
+    if (token.type === "number") {
+      current++
+
+      return {
+        type: "NumberLiteral",
+        value: token.value
+      }
+    }
+
+    if (token.type === "string") {
+      current++
+
+      return {
+        type: "StringLiteral",
+        value: token.value
+      }
+    }
+
+    if (token.type === "paren" && token.value === "(") {
+      /** skip the parenthesis since its not used on the AST */
+      token = tokens[++current]
+
+      let node = {
+        type: "CallExpression",
+        name: token.value,
+        params: []
+      }
+
+      token = tokens[++current]
+
+      /** push to the node params using the walk function, until it reaches an enclosing parenthesis */
+      while (
+        token.type !== "paren" ||
+        (token.type === "paren" && token.value !== ")")
+      ) {
+        node.params.push(walk())
+        token = tokens[current]
+      }
+
+      current++
+
+      return node
+    }
+
+    throw new TypeError(token.type)
+  }
+
+  let ast = {
+    type: "Program",
+    body: []
+  }
+
+  while (current < tokens.length) {
+    ast.body.push(walk())
+  }
+
+  return ast
+}
+
+const tokens = getTokens("(add 2 (subtract 2 4))")
+console.log(tokens)
+
+const ast = getAbstractSyntexTree(tokens)
+console.log(JSON.stringify(ast))
