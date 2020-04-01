@@ -15,6 +15,7 @@ function tokenizer(input) {
       value = char
     }
 
+    /** whitespace is not important for now, just skipping it */
     if (WHITESPACE.test(char)) {
       current++
       continue
@@ -28,6 +29,9 @@ function tokenizer(input) {
         value += char
         char = input[++current]
       }
+
+      tokens.push({ type, value })
+      continue
     }
 
     if (char === '"') {
@@ -40,9 +44,11 @@ function tokenizer(input) {
         char = input[++current]
       }
 
-      /** Skip the closing double quote. */
+      /** skip the closing double quote. */
+      current++
 
-      char = input[++current]
+      tokens.push({ type, value })
+      continue
     }
 
     if (LETTERS.test(char)) {
@@ -53,15 +59,18 @@ function tokenizer(input) {
         value += char
         char = input[++current]
       }
+
+      tokens.push({ type, value })
+      continue
     }
 
     tokens.push({ type, value })
-
     current++
+
     continue
   }
 
   console.log(tokens)
 }
 
-tokenizer("(add 2 2)")
+tokenizer("(add 2 (subtract 2 4))")
