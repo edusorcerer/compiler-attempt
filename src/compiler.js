@@ -186,7 +186,7 @@ function getAbstractSyntexTree(tokens) {
  * @param {Object} ast
  * @param {Object} visitor
  */
-function traverser(ast, visitor) {
+function traverse(ast, visitor) {
   /**
    * Function to iterate over an array, and then traversing the child node
    *
@@ -248,8 +248,85 @@ function traverser(ast, visitor) {
   traverseNode(ast, null)
 }
 
+/**
+ * Creates a new AST from the given AST,
+ * using traverse helper with a visitor
+ *
+ * @param {Object} ast The Abstract Syntax Tree
+ * @returns {Object} The new Abstract Syntax Tree
+ */
+function getTransformedAbstractSyntaxTree(ast) {
+  let newAst = {
+    type: "Program",
+    body: []
+  }
+
+  /** the context is a reference from the old AST to the new AST */
+  ast._context = newAst.body
+
+  const visitor = {
+    NumberLiteral: {
+      enter(node, parent) {
+        /** create a new node on the parent context */
+        parent._context.push({
+          type: "NumberLiteral",
+          value: node.value
+        })
+      }
+    },
+
+    StringLiteral: {
+      enter(node, parent) {
+        parent._context.push({
+          type: "StringLiteral",
+          value: node.value
+        })
+      }
+    },
+
+    CallExpression: {
+      enter(node, parent) {
+        /** create a new node with a nested identifier */
+        let expression = {
+          type: "CallExpression",
+          callee: {
+            type: "Identifier",
+            name: node.name
+          },
+          arguments: []
+        }
+
+        /** define a new context on the CallExperssion node to reference the expression arguments */
+        node._context = expression.arguments
+
+        if (parent.type !== "CallExpression") {
+          /**
+           * since the parent isn't a CallExpression,
+           * wrap the current CallExpression with an ExpressionStatement
+           *
+           * this is because the top level CallExpression in Javascript are actually statements
+           * */
+          expression = {
+            type: "ExpressionStatement",
+            expression: expression
+          }
+        }
+
+        /** push the (possibly wrapped) CallExpression to the parent context */
+        parent._context.push(expression)
+      }
+    }
+  }
+
+  /** traverse the AST with the visitor */
+  traverse(ast, visitor)
+
+  return newAst
+}
+
 const tokens = getTokens("(add 2 (subtract 2 4))")
-console.log(tokens)
 
 const ast = getAbstractSyntexTree(tokens)
-console.log(JSON.stringify(ast))
+
+const newAst = getTransformedAbstractSyntaxTree(ast)
+console.log(JSON.stringify(newAst))
