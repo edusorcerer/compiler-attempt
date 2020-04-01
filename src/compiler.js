@@ -1,3 +1,9 @@
+/**
+ * Create tokens from the given input
+ *
+ * @param {String} input The input string
+ * @returns {Array} The array of tokens
+ */
 function getTokens(input) {
   let current = 0
   let tokens = []
@@ -107,6 +113,7 @@ function getTokens(input) {
  *   ]
  * }
  * @param {Array} tokens The tokens array
+ * @returns {Object} The Abstract Syntax Tree
  */
 function getAbstractSyntexTree(tokens) {
   let current = 0
@@ -171,6 +178,74 @@ function getAbstractSyntexTree(tokens) {
   }
 
   return ast
+}
+
+/**
+ * Helper for traversing an AST with a given visitor
+ *
+ * @param {Object} ast
+ * @param {Object} visitor
+ */
+function traverser(ast, visitor) {
+  /**
+   * Function to iterate over an array, and then traversing the child node
+   *
+   * @param {Array} array The array to be traversed
+   * @param {Object} parent The array parent
+   */
+  function traverseArray(array, parent) {
+    array.forEach(child => {
+      traverseNode(child, parent)
+    })
+  }
+
+  /**
+   * Accepts a node and its parent node so they both can be passed to the visitor methods
+   *
+   * @param {*} node
+   * @param {*} parent
+   */
+  function traverseNode(node, parent) {
+    /** Check if the visitor has a method for the current node type */
+    let methods = visitor[node.type]
+
+    /** Call the enter method for this node type if it exists */
+    if (methods && methods.enter) {
+      methods.enter(node, parent)
+    }
+
+    /** Split things by the current node type */
+    switch (node.type) {
+      /**
+       * Starting with the root program.
+       * (Remember that `traverseArray` will in turn call `traverseNode` so  we
+       * are causing the tree to be traversed recursively)
+       */
+      case "Program":
+        traverseArray(node.body, node)
+        break
+
+      case "CallExpression":
+        traverseArray(node.params, node)
+        break
+
+      /** These types have no child nodes to visit, so we'll just break */
+      case "NumberLiteral":
+      case "StringLiteral":
+        break
+
+      default:
+        throw new TypeError(node.type)
+    }
+
+    /** Call the exit method for this node type if it exists */
+    if (methods && methods.exit) {
+      methods.exit(node, parent)
+    }
+  }
+
+  /** Kickstart by calling traverseNode, passing the given AST */
+  traverseNode(ast, null)
 }
 
 const tokens = getTokens("(add 2 (subtract 2 4))")
